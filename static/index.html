@@ -1,0 +1,1573 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffd23f">
+<meta name="description" content="Doodle Duel: a live Pictionary game where Gemma 4 guesses what you draw.">
+<title>Doodle Duel · Pictionary vs Gemma 4</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✏️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1f1b2e;
+    --ink-soft: #4a4560;
+    --muted: #77728a;
+    --paper: #fff8ea;
+    --dots: #eadfc6;
+    --card: #ffffff;
+    --yellow: #ffd23f;
+    --pink: #ff5d8f;
+    --teal: #2ec4b6;
+    --blue: #3a86ff;
+    --purple: #8e5cf7;
+    --orange: #ff9f1c;
+    --green: #2fbf71;
+    --red: #ef476f;
+    --mint: #7dffb2;
+    --wobble: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    --wobble-2: 15px 225px 15px 255px / 255px 15px 225px 15px;
+    --shadow: 4px 4px 0 var(--ink);
+    --shadow-lg: 6px 6px 0 var(--ink);
+    --hand: "Patrick Hand", "Comic Sans MS", "Chalkboard SE", cursive;
+    --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --ease-bounce: cubic-bezier(.34, 1.56, .64, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--body);
+    color: var(--ink);
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--dots) 1.3px, transparent 1.3px);
+    background-size: 22px 22px;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  :focus-visible { outline: 3px dashed var(--blue); outline-offset: 3px; }
+  .hidden { display: none !important; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ------------------------------------------------------------------ header */
+  .topbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px 20px;
+    max-width: 1240px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 18px 20px 8px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; margin-right: auto; }
+  .logo {
+    display: grid; place-items: center;
+    width: 52px; height: 52px;
+    font-size: 28px;
+    background: var(--yellow);
+    border: 3px solid var(--ink);
+    border-radius: var(--wobble);
+    box-shadow: var(--shadow);
+    transform: rotate(-6deg);
+    transition: transform .3s var(--ease-bounce);
+  }
+  .brand:hover .logo { transform: rotate(8deg) scale(1.08); }
+  h1 {
+    margin: 0;
+    font-family: var(--hand);
+    font-weight: 400;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    line-height: 1;
+    letter-spacing: .5px;
+  }
+  h1 .duel { position: relative; color: var(--pink); display: inline-block; transform: rotate(-3deg); }
+  h1 .duel svg { position: absolute; left: -4px; right: -4px; bottom: -10px; width: calc(100% + 8px); height: 12px; }
+  .tagline { margin: 4px 0 0; font-size: .85rem; color: var(--muted); font-weight: 700; }
+
+  .modes { display: flex; gap: 10px; }
+  .mode-btn, .btn, .tool, .score-chip {
+    border: 3px solid var(--ink);
+    background: var(--card);
+    box-shadow: var(--shadow);
+    transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+  }
+  .mode-btn:hover:not(:disabled), .btn:hover:not(:disabled), .tool:hover:not(:disabled), .score-chip:hover {
+    transform: translate(-1px, -2px);
+    box-shadow: 5px 6px 0 var(--ink);
+  }
+  .mode-btn:active:not(:disabled), .btn:active:not(:disabled), .tool:active:not(:disabled), .score-chip:active {
+    transform: translate(3px, 3px);
+    box-shadow: 1px 1px 0 var(--ink);
+  }
+  .mode-btn {
+    padding: 9px 16px;
+    font-family: var(--hand);
+    font-size: 1.15rem;
+    border-radius: var(--wobble);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .mode-btn[aria-selected="true"] { background: var(--yellow); }
+  .mode-btn:nth-child(2)[aria-selected="true"] { background: #b9f3ea; }
+  .mode-btn .emoji { font-size: 1.25rem; }
+  .mode-btn .short { display: none; }
+
+  .score-chip {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    font-family: var(--hand);
+    font-size: 1.25rem;
+    border-radius: var(--wobble-2);
+    background: #ffe3ec;
+  }
+  .score-chip b { font-family: var(--body); font-weight: 900; font-size: 1.1rem; min-width: 2ch; text-align: right; }
+  .score-chip.bump { animation: bump .5s var(--ease-bounce); }
+
+  .notice {
+    max-width: 1240px; margin: 6px auto 0; padding: 0 20px; width: 100%;
+  }
+  .notice div {
+    padding: 10px 14px;
+    background: #fff1c2;
+    border: 3px dashed var(--orange);
+    border-radius: 14px;
+    font-weight: 700;
+  }
+  .notice code { background: #fff; padding: 1px 6px; border-radius: 6px; }
+
+  /* ------------------------------------------------------------------ layout */
+  .layout {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 370px;
+    gap: 26px;
+    align-items: start;
+    max-width: 1240px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 16px 20px 24px;
+  }
+  .card {
+    background: var(--card);
+    border: 3px solid var(--ink);
+    border-radius: 22px 30px 24px 34px / 30px 22px 34px 24px;
+    box-shadow: var(--shadow-lg);
+    padding: 18px;
+  }
+
+  /* ------------------------------------------------------------------ stage */
+  .word-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .word-card {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 18px 10px;
+    background: var(--yellow);
+    border: 3px solid var(--ink);
+    border-radius: var(--wobble);
+    transform: rotate(-1deg);
+    box-shadow: var(--shadow);
+  }
+  .word-card small {
+    display: block;
+    font-size: .72rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .word-card strong {
+    display: block;
+    font-family: var(--hand);
+    font-weight: 400;
+    font-size: clamp(1.7rem, 3.6vw, 2.4rem);
+    line-height: 1.1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .word-card.reveal strong { animation: pop .5s var(--ease-bounce); }
+  .difficulty {
+    display: inline-block; margin-left: 8px; padding: 0 8px;
+    border: 2px solid var(--ink); border-radius: 999px;
+    background: #fff; font-family: var(--body); font-size: .7rem; font-weight: 900;
+    vertical-align: middle; text-transform: uppercase; letter-spacing: .06em;
+  }
+
+  .timer { position: relative; width: 72px; height: 72px; flex: none; }
+  .timer svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .timer .track { fill: #fff; stroke: #eee6d3; stroke-width: 8; }
+  .timer .ring { fill: none; stroke: var(--teal); stroke-width: 8; stroke-linecap: round; transition: stroke .3s; }
+  .timer .outline { fill: none; stroke: var(--ink); stroke-width: 3; }
+  .timer span {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-family: var(--hand); font-size: 1.7rem;
+  }
+  .timer.warn .ring { stroke: var(--orange); }
+  .timer.danger .ring { stroke: var(--red); }
+  .timer.danger { animation: shake .5s ease-in-out infinite; }
+
+  .canvas-wrap {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    background: #fff;
+    border: 3px solid var(--ink);
+    border-radius: 18px 26px 20px 28px / 26px 18px 28px 20px;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 6px #fffdf6;
+  }
+  #board {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    touch-action: none;
+    cursor: crosshair;
+    display: block;
+  }
+  .canvas-wrap.locked #board { cursor: default; }
+  .canvas-hint {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    pointer-events: none;
+    font-family: var(--hand); font-size: clamp(1.4rem, 3vw, 2rem); color: #cfc8b6;
+    transition: opacity .3s;
+  }
+
+  .overlay {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    padding: 18px;
+    background: rgba(255, 248, 234, .9);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    transition: opacity .3s ease;
+    z-index: 3;
+  }
+  .overlay.gone { opacity: 0; pointer-events: none; }
+  .overlay-card { text-align: center; max-width: 440px; animation: pop .5s var(--ease-bounce); }
+  .overlay-card .big-emoji { font-size: clamp(2.6rem, 7vw, 3.6rem); display: inline-block; animation: float 3s ease-in-out infinite; }
+  .overlay-card h2 { font-family: var(--hand); font-weight: 400; font-size: clamp(1.7rem, 4vw, 2.3rem); margin: 6px 0 4px; }
+  .overlay-card p { margin: 0 0 16px; color: var(--ink-soft); font-weight: 600; line-height: 1.45; }
+
+  .banner {
+    position: absolute; left: 50%; top: 14px; z-index: 2;
+    width: max-content; max-width: calc(100% - 28px);
+    padding: 10px 20px 12px;
+    text-align: center;
+    background: var(--card);
+    border: 3px solid var(--ink);
+    border-radius: var(--wobble);
+    box-shadow: var(--shadow);
+    transform: translate(-50%, 0) rotate(-1.5deg);
+    animation: drop .6s var(--ease-bounce);
+    pointer-events: none;
+  }
+  .banner.win { background: #c9f7dc; }
+  .banner.lose { background: #ffe0e6; }
+  .banner.judge { background: #e6dcff; }
+  .banner-title { font-family: var(--hand); font-size: clamp(1.4rem, 3.4vw, 2rem); line-height: 1.1; }
+  .banner-sub { font-weight: 800; font-size: .92rem; color: var(--ink-soft); }
+
+  .mini-guess {
+    display: none;
+    position: absolute; left: 10px; bottom: 10px; z-index: 1;
+    max-width: calc(100% - 20px);
+    padding: 4px 12px;
+    background: #fff;
+    border: 2.5px solid var(--ink);
+    border-radius: 999px;
+    font-family: var(--hand); font-size: 1.1rem;
+    pointer-events: none;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* ------------------------------------------------------------------ toolbar */
+  .toolbar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+    margin-top: 14px;
+  }
+  .tool-group { display: flex; align-items: center; gap: 8px; }
+  .tool-group + .tool-group { padding-left: 16px; border-left: 3px dotted #d9d0bb; }
+  .tool {
+    width: 46px; height: 46px;
+    display: grid; place-items: center;
+    padding: 0;
+    border-radius: var(--wobble-2);
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .tool svg { width: 22px; height: 22px; }
+  .tool[aria-pressed="true"] { background: var(--yellow); transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+  .tool:disabled { opacity: .45; box-shadow: 3px 3px 0 var(--ink); transform: none; }
+  .size-dot { background: var(--ink); border-radius: 50%; display: block; }
+  .swatch {
+    width: 38px; height: 38px;
+    padding: 0;
+    border: 3px solid var(--ink);
+    border-radius: 50%;
+    background: var(--c);
+    box-shadow: 2px 2px 0 var(--ink);
+    transition: transform .2s var(--ease-bounce);
+  }
+  .swatch:hover { transform: scale(1.1) rotate(-6deg); }
+  .swatch[aria-pressed="true"] { transform: scale(1.15); box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--ink); }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+  .btn {
+    padding: 11px 24px 12px;
+    font-family: var(--hand);
+    font-size: 1.35rem;
+    line-height: 1;
+    border-radius: var(--wobble);
+  }
+  .btn-primary { background: var(--pink); color: #fff; text-shadow: 1px 1px 0 var(--ink); }
+  .btn-go { background: var(--green); color: #fff; text-shadow: 1px 1px 0 var(--ink); }
+  .btn-ghost { background: #fff; }
+  .btn-big { font-size: 1.6rem; padding: 14px 32px 15px; }
+  .btn:disabled { opacity: .55; }
+  .btn.wiggle { animation: wiggle 2.4s ease-in-out infinite; }
+
+  /* ------------------------------------------------------------------ Gemma panel */
+  .gemma { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 16px; }
+  .robot-row { display: flex; align-items: flex-start; gap: 6px; }
+  .robot-col { flex: none; width: 104px; text-align: center; }
+  .robot { width: 104px; height: auto; display: block; overflow: visible; animation: bob 3.2s ease-in-out infinite; }
+  .robot .eyes { transform-origin: 60px 54px; animation: blink 5s infinite; }
+  .robot .antenna-ball { transform-origin: 60px 9px; }
+  .robot .mouth-happy, .robot .mouth-o, .robot .mouth-sad { display: none; }
+  .robot .arm-wave { transform-origin: 104px 104px; }
+  .robot.thinking .antenna-ball { animation: glow .7s ease-in-out infinite alternate; }
+  .robot.thinking .eyes { animation: scan 1.6s ease-in-out infinite; }
+  .robot.thinking .mouth-smile { display: none; }
+  .robot.thinking .mouth-o { display: inline; }
+  .robot.happy { animation: jump .55s ease-in-out 3; }
+  .robot.happy .mouth-smile { display: none; }
+  .robot.happy .mouth-happy { display: inline; }
+  .robot.happy .arm-wave { animation: wave .35s ease-in-out 6 alternate; }
+  .robot.sad .mouth-smile { display: none; }
+  .robot.sad .mouth-sad { display: inline; }
+  .robot.sad .eyes { transform: translateY(3px) scaleY(.7); animation: none; }
+  .robot-name { font-family: var(--hand); font-size: 1.15rem; margin-top: 2px; }
+  .status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--green); border: 2px solid var(--ink); margin-right: 4px; vertical-align: 1px; }
+  .status-dot.off { background: var(--red); }
+
+  .bubble {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    min-height: 128px;
+    margin-top: 6px;
+    padding: 12px 15px 14px;
+    background: #fff;
+    border: 3px solid var(--ink);
+    border-radius: 24px 30px 26px 18px / 28px 22px 30px 20px;
+    box-shadow: var(--shadow);
+  }
+  .bubble::before, .bubble::after {
+    content: ""; position: absolute; top: 28px; width: 0; height: 0; border-style: solid;
+  }
+  .bubble::before { left: -17px; border-width: 9px 17px 9px 0; border-color: transparent var(--ink) transparent transparent; }
+  .bubble::after { left: -11px; top: 31px; border-width: 6px 12px 6px 0; border-color: transparent #fff transparent transparent; }
+  .bubble.pulse { animation: pop .4s var(--ease-bounce); }
+  .bubble-guess { font-family: var(--hand); font-size: 1.2rem; color: var(--ink-soft); line-height: 1.15; }
+  .bubble-guess b {
+    display: inline-block;
+    font-weight: 400;
+    font-size: 2rem;
+    color: var(--ink);
+    animation: pop .45s var(--ease-bounce);
+    word-break: break-word;
+  }
+  .bubble-guess b.hit { color: var(--green); }
+  .bubble-comment { margin: 6px 0 0; font-weight: 600; line-height: 1.4; font-size: .98rem; }
+  .bubble-comment.typing::after { content: "▍"; margin-left: 1px; color: var(--pink); animation: caret .7s steps(1) infinite; }
+  .bubble-comment.error { color: #b3204a; }
+  .dots { display: inline-flex; gap: 5px; padding: 6px 0; }
+  .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); animation: dot 1s ease-in-out infinite; }
+  .dots i:nth-child(2) { animation-delay: .15s; background: var(--pink); }
+  .dots i:nth-child(3) { animation-delay: .3s; background: var(--teal); }
+  .model-tag { margin-top: 8px; font-size: .72rem; color: var(--muted); font-weight: 700; }
+
+  .panel-title {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 0 0 8px;
+    font-family: var(--hand); font-weight: 400; font-size: 1.35rem;
+  }
+  .panel-title span { font-family: var(--body); font-weight: 900; font-size: 1.05rem; }
+  .meter {
+    height: 22px;
+    background: #f3eddf;
+    border: 3px solid var(--ink);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .meter-fill {
+    height: 100%; width: 0%;
+    background: var(--fill, var(--teal));
+    border-right: 3px solid var(--ink);
+    transition: width .7s var(--ease-bounce), background .5s ease;
+    background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,.35) 0 8px, transparent 8px 16px);
+    background-color: var(--fill, var(--teal));
+  }
+  .meter-fill.zero { border-right-color: transparent; }
+
+  .gauge-box { text-align: center; }
+  .gauge { width: 100%; max-width: 250px; display: block; margin: 0 auto; overflow: visible; }
+  .gauge .g-track { fill: none; stroke: #f0e9d9; stroke-width: 20; stroke-linecap: round; }
+  .gauge .g-outline { fill: none; stroke: var(--ink); stroke-width: 26; stroke-linecap: round; }
+  .gauge .g-fill { fill: none; stroke: url(#gaugeGrad); stroke-width: 20; stroke-linecap: round; transition: stroke-dashoffset 1.4s var(--ease-bounce); }
+  .gauge .needle { transform-origin: 110px 112px; transform: rotate(-90deg); transition: transform 1.4s var(--ease-bounce); }
+  .gauge-num { font-family: var(--hand); font-size: 2.8rem; line-height: 1; margin-top: -8px; }
+  .gauge-num small { font-size: 1.3rem; color: var(--muted); }
+  .gauge-label { font-weight: 900; color: var(--purple); min-height: 1.4em; }
+
+  .log { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+  .log li {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) 64px 38px; align-items: center; gap: 8px;
+    padding: 7px 4px;
+    border-bottom: 2px dashed #ece4d2;
+    animation: slide-in .35s ease;
+  }
+  .log li:last-child { border-bottom: 0; }
+  .log li.empty { display: block; color: var(--muted); font-weight: 600; text-align: center; padding: 14px 0; animation: none; }
+  .log .t {
+    font-size: .72rem; font-weight: 900;
+    padding: 2px 7px; border: 2px solid var(--ink); border-radius: 999px; background: #f6f1e4;
+  }
+  .log .g { font-family: var(--hand); font-size: 1.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .log .mini { height: 8px; border: 2px solid var(--ink); border-radius: 99px; overflow: hidden; background: #f3eddf; }
+  .log .mini i { display: block; height: 100%; background: var(--fill); }
+  .log .p { font-weight: 900; font-size: .85rem; text-align: right; }
+  .log li.hit { background: #d5f8e3; border-radius: 10px; }
+  .log li.hit .g::after { content: " ✓"; color: var(--green); }
+
+  /* ------------------------------------------------------------------ scoreboard dialog */
+  dialog {
+    width: min(460px, calc(100vw - 32px));
+    padding: 22px;
+    border: 3px solid var(--ink);
+    border-radius: 24px 32px 26px 34px / 32px 24px 34px 26px;
+    box-shadow: 8px 8px 0 var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  dialog[open] { animation: pop .4s var(--ease-bounce); }
+  dialog::backdrop { background: rgba(31, 27, 46, .45); backdrop-filter: blur(2px); }
+  dialog h2 { font-family: var(--hand); font-weight: 400; font-size: 2rem; margin: 0 0 14px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat {
+    padding: 10px 12px;
+    background: #fff;
+    border: 3px solid var(--ink);
+    border-radius: var(--wobble-2);
+  }
+  .stat:nth-child(4n+1) { background: #fff3c4; }
+  .stat:nth-child(4n+4) { background: #dcf7f3; }
+  .stat b { display: block; font-family: var(--hand); font-weight: 400; font-size: 1.8rem; line-height: 1.1; }
+  .stat small { font-weight: 800; color: var(--ink-soft); font-size: .78rem; }
+  .dialog-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
+  .dialog-actions .btn { font-size: 1.15rem; padding: 9px 18px 10px; }
+
+  /* ------------------------------------------------------------------ footer, toast, confetti */
+  footer {
+    text-align: center;
+    padding: 14px 20px 22px;
+    font-family: var(--hand);
+    font-size: 1.15rem;
+    color: var(--ink-soft);
+  }
+  footer .sep { color: var(--pink); margin: 0 6px; }
+  .toast {
+    position: fixed; left: 50%; bottom: 22px; z-index: 50;
+    max-width: calc(100vw - 32px);
+    padding: 10px 18px;
+    background: var(--ink); color: #fff;
+    border-radius: 14px;
+    font-weight: 700;
+    box-shadow: 4px 4px 0 var(--pink);
+    transform: translate(-50%, calc(100% + 40px));
+    visibility: hidden;
+    transition: transform .35s var(--ease-bounce), visibility 0s .35s;
+  }
+  .toast.show { transform: translate(-50%, 0); visibility: visible; transition: transform .35s var(--ease-bounce); }
+  #confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 40; }
+
+  /* ------------------------------------------------------------------ animations */
+  @keyframes pop { 0% { transform: scale(.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes bump { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.18) rotate(-3deg); } }
+  @keyframes drop { 0% { transform: translate(-50%, -140%) rotate(-8deg); } 100% { transform: translate(-50%, 0) rotate(-1.5deg); } }
+  @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-5px) rotate(1.5deg); } }
+  @keyframes jump { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-16px) rotate(-6deg); } 70% { transform: translateY(-4px) rotate(4deg); } }
+  @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+  @keyframes scan { 0%, 100% { transform: translateX(-5px); } 50% { transform: translateX(5px); } }
+  @keyframes glow { from { fill: var(--pink); transform: scale(1); } to { fill: var(--yellow); transform: scale(1.35); } }
+  @keyframes wave { from { transform: rotate(0deg); } to { transform: rotate(-38deg); } }
+  @keyframes dot { 0%, 100% { transform: translateY(0); opacity: .5; } 50% { transform: translateY(-7px); opacity: 1; } }
+  @keyframes caret { 50% { opacity: 0; } }
+  @keyframes shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
+  @keyframes float { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-8px) rotate(4deg); } }
+  @keyframes wiggle { 0%, 86%, 100% { transform: rotate(0); } 89% { transform: rotate(-4deg); } 93% { transform: rotate(4deg); } 96% { transform: rotate(-2deg); } }
+  @keyframes slide-in { from { transform: translateX(-14px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
+
+  /* ------------------------------------------------------------------ responsive */
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    .gemma { position: static; }
+    .mini-guess:not(:empty) { display: block; }
+  }
+  @media (max-width: 640px) {
+    .topbar { padding: 12px 16px 4px; gap: 10px 12px; }
+    .logo { width: 44px; height: 44px; font-size: 24px; }
+    .tagline { display: none; }
+    .modes { order: 3; width: 100%; }
+    .mode-btn { flex: 1; justify-content: center; font-size: 1rem; padding: 8px 8px; }
+    .mode-btn .long { display: none; }
+    .mode-btn .short { display: inline; }
+    .score-chip { font-size: 1.1rem; padding: 6px 12px; }
+    .notice { padding: 0 16px; }
+    .layout { padding: 12px 16px 18px; }
+    .card { padding: 12px; border-radius: 18px 24px 20px 26px / 24px 18px 26px 20px; }
+    .word-row { gap: 10px; margin-bottom: 10px; }
+    .word-card { padding: 6px 12px 8px; }
+    .timer { width: 60px; height: 60px; }
+    .timer span { font-size: 1.4rem; }
+    .overlay { padding: 10px; overflow-y: auto; }
+    .overlay-card .big-emoji { display: none; }
+    .overlay-card h2 { font-size: 1.5rem; margin: 0 0 4px; }
+    .overlay-card p { font-size: .82rem; line-height: 1.35; margin-bottom: 10px; }
+    .btn-big { font-size: 1.3rem; padding: 10px 24px 11px; }
+    .toolbar { gap: 10px 8px; justify-content: space-between; }
+    #colors { order: -1; width: 100%; justify-content: space-between; }
+    .tool-group + .tool-group { padding-left: 0; border-left: 0; }
+    .tool { width: 42px; height: 42px; }
+    .swatch { width: 34px; height: 34px; }
+    .actions .btn { flex: 1; }
+    .robot-col, .robot { width: 84px; }
+    .log { max-height: 190px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">✏️</div>
+    <div>
+      <h1>Doodle <span class="duel">Duel<svg viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true"><path d="M2 8 Q 15 2 28 7 T 54 7 T 80 6 T 98 5" fill="none" stroke="#1f1b2e" stroke-width="3" stroke-linecap="round"/></svg></span></h1>
+      <p class="tagline">Pictionary against a robot with opinions.</p>
+    </div>
+  </div>
+  <nav class="modes" role="tablist" aria-label="Game mode">
+    <button class="mode-btn" role="tab" aria-selected="true" data-mode="guess"><span class="emoji">🤖</span><span class="long">You draw, Gemma guesses</span><span class="short">Gemma guesses</span></button>
+    <button class="mode-btn" role="tab" aria-selected="false" data-mode="judge"><span class="emoji">🎨</span><span class="long">Gemma challenges you</span><span class="short">Gemma judges</span></button>
+  </nav>
+  <button class="score-chip" id="scoreChip" aria-label="Open scoreboard">⭐ <b id="pointsTotal">0</b> pts</button>
+</header>
+
+<div class="notice hidden" id="keyNotice"><div>⚠️ The server has no <code>GEMINI_API_KEY</code> set, so Gemma can't see your drawings yet. Set it and restart the server.</div></div>
+
+<main class="layout">
+  <section class="stage card" aria-label="Drawing area">
+    <div class="word-row">
+      <div class="word-card" id="wordCard">
+        <small id="wordLabel">Your secret word</small>
+        <strong id="wordText">???</strong>
+      </div>
+      <div class="timer" id="timer" aria-live="off">
+        <svg viewBox="0 0 80 80" aria-hidden="true">
+          <circle class="track" cx="40" cy="40" r="32"/>
+          <circle class="ring" id="timerRing" cx="40" cy="40" r="32" pathLength="100" stroke-dasharray="100" stroke-dashoffset="0"/>
+          <circle class="outline" cx="40" cy="40" r="37"/>
+        </svg>
+        <span id="timerText">60</span>
+      </div>
+    </div>
+
+    <div class="canvas-wrap locked" id="canvasWrap">
+      <canvas id="board" aria-label="Drawing canvas"></canvas>
+      <div class="canvas-hint" id="canvasHint">Start sketching!</div>
+      <div class="mini-guess" id="miniGuess" aria-hidden="true"></div>
+      <div class="banner hidden" id="banner" role="status">
+        <div class="banner-title" id="bannerTitle"></div>
+        <div class="banner-sub" id="bannerSub"></div>
+      </div>
+      <div class="overlay" id="overlay">
+        <div class="overlay-card" id="overlayCard">
+          <div class="big-emoji" id="overlayEmoji">🤖</div>
+          <h2 id="overlayTitle">You draw, Gemma guesses</h2>
+          <p id="overlayText"></p>
+          <button class="btn btn-primary btn-big wiggle" id="overlayBtn">Start round</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar" role="toolbar" aria-label="Drawing tools">
+      <div class="tool-group" id="sizes">
+        <button class="tool" data-size="4" aria-label="Thin pen" aria-pressed="false"><span class="size-dot" style="width:6px;height:6px"></span></button>
+        <button class="tool" data-size="10" aria-label="Medium pen" aria-pressed="true"><span class="size-dot" style="width:12px;height:12px"></span></button>
+        <button class="tool" data-size="22" aria-label="Thick pen" aria-pressed="false"><span class="size-dot" style="width:20px;height:20px"></span></button>
+      </div>
+      <div class="tool-group" id="colors">
+        <button class="swatch" data-color="#1f1b2e" style="--c:#1f1b2e" aria-label="Black" aria-pressed="true"></button>
+        <button class="swatch" data-color="#ef476f" style="--c:#ef476f" aria-label="Red" aria-pressed="false"></button>
+        <button class="swatch" data-color="#3a86ff" style="--c:#3a86ff" aria-label="Blue" aria-pressed="false"></button>
+        <button class="swatch" data-color="#2fbf71" style="--c:#2fbf71" aria-label="Green" aria-pressed="false"></button>
+        <button class="swatch" data-color="#ffb703" style="--c:#ffb703" aria-label="Yellow" aria-pressed="false"></button>
+      </div>
+      <div class="tool-group">
+        <button class="tool" id="eraserBtn" aria-label="Eraser (E)" title="Eraser (E)" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H9L3.6 14.6a2 2 0 0 1 0-2.8l8-8a2 2 0 0 1 2.8 0l5.6 5.6a2 2 0 0 1 0 2.8L13 19"/><path d="M7 9.5l7.5 7.5"/></svg>
+        </button>
+        <button class="tool" id="undoBtn" aria-label="Undo (Ctrl+Z)" title="Undo (Ctrl+Z)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+        </button>
+        <button class="tool" id="clearBtn" aria-label="Clear canvas" title="Clear canvas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary hidden" id="primaryBtn">Start round</button>
+      <button class="btn btn-go hidden" id="doneBtn">Done! Judge me ✨</button>
+      <button class="btn btn-ghost hidden" id="skipBtn">Skip word</button>
+    </div>
+  </section>
+
+  <aside class="gemma" aria-label="Gemma">
+    <div class="card">
+      <div class="robot-row">
+        <div class="robot-col">
+          <svg class="robot" id="robot" viewBox="0 0 130 140" aria-hidden="true">
+            <line x1="60" y1="24" x2="60" y2="11" stroke="#1f1b2e" stroke-width="4" stroke-linecap="round"/>
+            <circle class="antenna-ball" cx="60" cy="9" r="7" fill="#ff5d8f" stroke="#1f1b2e" stroke-width="3.5"/>
+            <rect x="4" y="46" width="13" height="26" rx="5" fill="#ffd23f" stroke="#1f1b2e" stroke-width="3.5"/>
+            <rect x="103" y="46" width="13" height="26" rx="5" fill="#ffd23f" stroke="#1f1b2e" stroke-width="3.5"/>
+            <rect x="14" y="23" width="92" height="72" rx="24" fill="#8fdcff" stroke="#1f1b2e" stroke-width="4"/>
+            <rect x="26" y="35" width="68" height="46" rx="15" fill="#1f1b2e"/>
+            <g class="eyes">
+              <ellipse cx="45" cy="54" rx="7.5" ry="8.5" fill="#7dffb2"/>
+              <ellipse cx="75" cy="54" rx="7.5" ry="8.5" fill="#7dffb2"/>
+              <circle cx="47.5" cy="51" r="2.6" fill="#fff"/>
+              <circle cx="77.5" cy="51" r="2.6" fill="#fff"/>
+            </g>
+            <path class="mouth-smile" d="M50 69 Q60 76 70 69" fill="none" stroke="#7dffb2" stroke-width="3.5" stroke-linecap="round"/>
+            <path class="mouth-happy" d="M47 67 Q60 82 73 67 Z" fill="#7dffb2" stroke="#7dffb2" stroke-width="2" stroke-linejoin="round"/>
+            <ellipse class="mouth-o" cx="60" cy="71" rx="4.5" ry="4" fill="none" stroke="#7dffb2" stroke-width="3"/>
+            <path class="mouth-sad" d="M50 74 Q60 66 70 74" fill="none" stroke="#7dffb2" stroke-width="3.5" stroke-linecap="round"/>
+            <ellipse cx="33" cy="88" rx="6" ry="3.5" fill="#ff9fbf"/>
+            <ellipse cx="87" cy="88" rx="6" ry="3.5" fill="#ff9fbf"/>
+            <path d="M33 95 h54 v26 a10 10 0 0 1 -10 10 h-34 a10 10 0 0 1 -10 -10 z" fill="#ffd23f" stroke="#1f1b2e" stroke-width="4" stroke-linejoin="round"/>
+            <path d="M60 104 c-3-4-9-2-8 2.5 c0.6 3 8 8 8 8 s7.4-5 8-8 c1-4.5-5-6.5-8-2.5z" fill="#ff5d8f" stroke="#1f1b2e" stroke-width="2.2"/>
+            <path d="M33 104 q-12 4 -14 16" fill="none" stroke="#1f1b2e" stroke-width="4" stroke-linecap="round"/>
+            <g class="arm-wave"><path d="M87 104 q14 -2 20 -16" fill="none" stroke="#1f1b2e" stroke-width="4" stroke-linecap="round"/><circle cx="108" cy="85" r="5" fill="#8fdcff" stroke="#1f1b2e" stroke-width="3"/></g>
+          </svg>
+          <div class="robot-name"><span class="status-dot" id="statusDot"></span>Gemma 4</div>
+        </div>
+        <div class="bubble" id="bubble" aria-live="polite">
+          <div class="dots hidden" id="dots" aria-label="Gemma is thinking"><i></i><i></i><i></i></div>
+          <div class="bubble-guess" id="bubbleGuess"></div>
+          <p class="bubble-comment" id="bubbleComment">Hi! I'm Gemma. Draw something and I'll try to guess it. No pressure. (Some pressure.)</p>
+          <div class="model-tag" id="modelTag"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="confidenceCard">
+      <h3 class="panel-title">Confidence <span id="confText">0%</span></h3>
+      <div class="meter" role="progressbar" aria-label="Gemma's confidence" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="confMeter">
+        <div class="meter-fill zero" id="confFill"></div>
+      </div>
+    </div>
+
+    <div class="card gauge-box hidden" id="gaugeCard">
+      <h3 class="panel-title" style="justify-content:center">Gemma's verdict</h3>
+      <svg class="gauge" viewBox="0 0 220 130" aria-hidden="true">
+        <defs>
+          <linearGradient id="gaugeGrad" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stop-color="#ef476f"/>
+            <stop offset=".5" stop-color="#ffd23f"/>
+            <stop offset="1" stop-color="#2fbf71"/>
+          </linearGradient>
+        </defs>
+        <path class="g-outline" d="M22 112 A88 88 0 0 1 198 112"/>
+        <path class="g-track" d="M22 112 A88 88 0 0 1 198 112"/>
+        <path class="g-fill" id="gaugeFill" d="M22 112 A88 88 0 0 1 198 112" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+        <g class="needle" id="needle">
+          <line x1="110" y1="112" x2="110" y2="42" stroke="#1f1b2e" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="110" cy="112" r="11" fill="#ff5d8f" stroke="#1f1b2e" stroke-width="4"/>
+        </g>
+      </svg>
+      <div class="gauge-num"><span id="gaugeNum">–</span><small>/10</small></div>
+      <div class="gauge-label" id="gaugeLabel">Waiting for a masterpiece…</div>
+    </div>
+
+    <div class="card">
+      <h3 class="panel-title" id="logTitle">Guess log</h3>
+      <ol class="log" id="log"></ol>
+    </div>
+  </aside>
+</main>
+
+<footer>Open source<span class="sep">·</span>Powered by Gemma 4<span class="sep">·</span>Hacktoberfest 2026</footer>
+
+<dialog id="scoreDialog" aria-labelledby="scoreTitle">
+  <h2 id="scoreTitle">🏆 Scoreboard</h2>
+  <div class="stats" id="stats"></div>
+  <div class="dialog-actions">
+    <button class="btn btn-ghost" id="resetStats">Reset</button>
+    <button class="btn btn-primary" id="closeStats">Back to drawing</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="alert"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------------------------------------------------------------- constants & state
+  const LW = 800, LH = 600;               // logical drawing space (4:3); strokes are stored in these units
+  const ROUND_SECONDS = 60;
+  const GUESS_DEBOUNCE_MS = 1500;
+  const STORE_KEY = "doodle-duel:stats:v1";
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const $ = (sel) => document.querySelector(sel);
+  const els = {
+    board: $("#board"), wrap: $("#canvasWrap"), hint: $("#canvasHint"), mini: $("#miniGuess"),
+    overlay: $("#overlay"), overlayEmoji: $("#overlayEmoji"), overlayTitle: $("#overlayTitle"),
+    overlayText: $("#overlayText"), overlayBtn: $("#overlayBtn"),
+    banner: $("#banner"), bannerTitle: $("#bannerTitle"), bannerSub: $("#bannerSub"),
+    wordCard: $("#wordCard"), wordLabel: $("#wordLabel"), wordText: $("#wordText"),
+    timer: $("#timer"), timerRing: $("#timerRing"), timerText: $("#timerText"),
+    primaryBtn: $("#primaryBtn"), doneBtn: $("#doneBtn"), skipBtn: $("#skipBtn"),
+    eraserBtn: $("#eraserBtn"), undoBtn: $("#undoBtn"), clearBtn: $("#clearBtn"),
+    robot: $("#robot"), bubble: $("#bubble"), dots: $("#dots"), bubbleGuess: $("#bubbleGuess"),
+    bubbleComment: $("#bubbleComment"), modelTag: $("#modelTag"), statusDot: $("#statusDot"),
+    confCard: $("#confidenceCard"), confText: $("#confText"), confFill: $("#confFill"), confMeter: $("#confMeter"),
+    gaugeCard: $("#gaugeCard"), gaugeFill: $("#gaugeFill"), needle: $("#needle"), gaugeNum: $("#gaugeNum"), gaugeLabel: $("#gaugeLabel"),
+    log: $("#log"), logTitle: $("#logTitle"),
+    points: $("#pointsTotal"), scoreChip: $("#scoreChip"), dialog: $("#scoreDialog"), stats: $("#stats"),
+    toast: $("#toast"), confetti: $("#confetti"), keyNotice: $("#keyNotice"),
+  };
+  const ctx = els.board.getContext("2d");
+
+  const S = {
+    mode: "guess",
+    color: "#1f1b2e",
+    size: 10,
+    eraser: false,
+    strokes: [],
+    past: [],          // undo snapshots of `strokes`
+    cur: null,
+    pointerId: null,
+    version: 0,        // bumps whenever the drawing changes
+    round: null,
+    roundSeq: 0,
+    lastWord: "",
+    guessTimer: null,
+    inFlight: false,
+    sentVersion: -1,
+    tickHandle: null,
+    logItems: { guess: [], judge: [] },
+  };
+
+  // ---------------------------------------------------------------- storage (never trust it to exist)
+  const DEFAULT_STATS = { points: 0, rounds: 0, gemmaWins: 0, fastest: null, streak: 0, bestStreak: 0, challenges: 0, scoreSum: 0, bestScore: null };
+  function loadStats() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      return raw ? { ...DEFAULT_STATS, ...JSON.parse(raw) } : { ...DEFAULT_STATS };
+    } catch { return { ...DEFAULT_STATS }; }
+  }
+  function saveStats() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(stats)); } catch { /* private mode etc. */ }
+  }
+  let stats = loadStats();
+
+  // ---------------------------------------------------------------- API
+  async function api(path, body) {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 45000);
+    try {
+      const res = await fetch(path, body ? {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      } : { signal: ctrl.signal });
+      let data;
+      try { data = await res.json(); } catch { data = null; }
+      if (!data || typeof data !== "object") data = { ok: false, error: `The server answered with ${res.status}.` };
+      if (!res.ok && data.ok !== false) data = { ok: false, error: data.error || `The server answered with ${res.status}.` };
+      return data;
+    } catch (err) {
+      return { ok: false, error: err && err.name === "AbortError" ? "Gemma took too long to answer. Try again!" : "Can't reach the server. Is it still running?" };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  // ---------------------------------------------------------------- canvas
+  function resizeCanvas() {
+    const r = els.wrap.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+    if (els.board.width !== w || els.board.height !== h) {
+      els.board.width = w; els.board.height = h;
+      redraw();
+    }
+  }
+  new ResizeObserver(resizeCanvas).observe(els.wrap);
+
+  function scale() { return els.board.width / LW; }
+
+  function applyStyle(c, s, k) {
+    c.strokeStyle = s.color; c.fillStyle = s.color;
+    c.lineWidth = s.size * k; c.lineCap = "round"; c.lineJoin = "round";
+  }
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+
+  function drawStroke(c, s, k) {
+    const p = s.points;
+    applyStyle(c, s, k);
+    if (p.length === 1) {
+      c.beginPath(); c.arc(p[0][0] * k, p[0][1] * k, (s.size * k) / 2, 0, Math.PI * 2); c.fill();
+      return;
+    }
+    c.beginPath();
+    c.moveTo(p[0][0] * k, p[0][1] * k);
+    for (let i = 1; i < p.length - 1; i++) {
+      const m = mid(p[i], p[i + 1]);
+      c.quadraticCurveTo(p[i][0] * k, p[i][1] * k, m[0] * k, m[1] * k);
+    }
+    const last = p[p.length - 1];
+    c.lineTo(last[0] * k, last[1] * k);
+    c.stroke();
+  }
+
+  function paint(c, w, h, k) {
+    c.fillStyle = "#ffffff";
+    c.fillRect(0, 0, w, h);
+    for (const s of S.strokes) drawStroke(c, s, k);
+  }
+  function redraw() { paint(ctx, els.board.width, els.board.height, scale()); }
+
+  // Draws only the newest curve piece so long sessions stay smooth (matches drawStroke's geometry).
+  function drawLiveSegment(s) {
+    const p = s.points, n = p.length, k = scale();
+    if (n < 3) return;
+    const start = n === 3 ? p[0] : mid(p[n - 3], p[n - 2]);
+    const ctrl = p[n - 2], end = mid(p[n - 2], p[n - 1]);
+    applyStyle(ctx, s, k);
+    ctx.beginPath();
+    ctx.moveTo(start[0] * k, start[1] * k);
+    ctx.quadraticCurveTo(ctrl[0] * k, ctrl[1] * k, end[0] * k, end[1] * k);
+    ctx.stroke();
+  }
+  function drawFinalSegment(s) {
+    const p = s.points, n = p.length, k = scale();
+    if (n < 2) return;
+    const start = n === 2 ? p[0] : mid(p[n - 2], p[n - 1]);
+    applyStyle(ctx, s, k);
+    ctx.beginPath();
+    ctx.moveTo(start[0] * k, start[1] * k);
+    ctx.lineTo(p[n - 1][0] * k, p[n - 1][1] * k);
+    ctx.stroke();
+  }
+
+  function toLogical(e) {
+    const r = els.board.getBoundingClientRect();
+    return [
+      Math.max(0, Math.min(LW, ((e.clientX - r.left) / r.width) * LW)),
+      Math.max(0, Math.min(LH, ((e.clientY - r.top) / r.height) * LH)),
+    ];
+  }
+
+  const canDraw = () => !!(S.round && S.round.active && !S.round.judging);
+
+  els.board.addEventListener("pointerdown", (e) => {
+    if (!canDraw() || S.cur) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.preventDefault();
+    try { els.board.setPointerCapture(e.pointerId); } catch { /* capture is a nicety, not a requirement */ }
+    S.pointerId = e.pointerId;
+    clearTimeout(S.guessTimer);
+    pushUndo();
+    S.cur = { color: S.eraser ? "#ffffff" : S.color, size: S.eraser ? S.size * 2.4 : S.size, points: [toLogical(e)] };
+    S.strokes.push(S.cur);
+    const k = scale(), p = S.cur.points[0];
+    applyStyle(ctx, S.cur, k);
+    ctx.beginPath(); ctx.arc(p[0] * k, p[1] * k, (S.cur.size * k) / 2, 0, Math.PI * 2); ctx.fill();
+    els.hint.style.opacity = "0";
+  });
+
+  els.board.addEventListener("pointermove", (e) => {
+    if (!S.cur || e.pointerId !== S.pointerId) return;
+    const events = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [e];
+    for (const ev of (events.length ? events : [e])) {
+      const pt = toLogical(ev), pts = S.cur.points, last = pts[pts.length - 1];
+      if (Math.hypot(pt[0] - last[0], pt[1] - last[1]) < 1.5) continue;
+      pts.push(pt);
+      drawLiveSegment(S.cur);
+    }
+  });
+
+  function endStroke(e) {
+    if (!S.cur || (e && e.pointerId !== S.pointerId)) return;
+    drawFinalSegment(S.cur);
+    S.cur = null; S.pointerId = null;
+    drawingChanged();
+  }
+  els.board.addEventListener("pointerup", endStroke);
+  els.board.addEventListener("pointercancel", endStroke);
+  els.board.addEventListener("lostpointercapture", endStroke);
+  els.board.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  function pushUndo() {
+    S.past.push(S.strokes.slice());
+    if (S.past.length > 100) S.past.shift();
+  }
+  function undo() {
+    if (!canDraw() || S.cur || !S.past.length) return;
+    S.strokes = S.past.pop();
+    redraw();
+    drawingChanged();
+  }
+  function clearBoard() {
+    if (!canDraw() || S.cur || !S.strokes.length) return;
+    pushUndo();
+    S.strokes = [];
+    redraw();
+    drawingChanged();
+  }
+  function resetBoard() {
+    S.strokes = []; S.past = []; S.cur = null; S.version++;
+    redraw();
+    els.hint.style.opacity = "1";
+    updateToolState();
+  }
+
+  function drawingChanged() {
+    S.version++;
+    els.hint.style.opacity = S.strokes.length ? "0" : "1";
+    updateToolState();
+    if (S.mode === "guess") scheduleGuess();
+  }
+
+  function exportPNG() {
+    const c = document.createElement("canvas");
+    c.width = 640; c.height = 480;
+    paint(c.getContext("2d"), c.width, c.height, c.width / LW);
+    return c.toDataURL("image/png");
+  }
+
+  // ---------------------------------------------------------------- toolbar
+  function setPressed(groupSel, btn) {
+    document.querySelectorAll(groupSel).forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+  }
+  document.querySelectorAll("#sizes .tool").forEach((b) => b.addEventListener("click", () => {
+    S.size = Number(b.dataset.size);
+    setPressed("#sizes .tool", b);
+  }));
+  document.querySelectorAll("#colors .swatch").forEach((b) => b.addEventListener("click", () => {
+    S.color = b.dataset.color;
+    setPressed("#colors .swatch", b);
+    setEraser(false);
+  }));
+  function setEraser(on) {
+    S.eraser = on;
+    els.eraserBtn.setAttribute("aria-pressed", String(on));
+  }
+  els.eraserBtn.addEventListener("click", () => setEraser(!S.eraser));
+  els.undoBtn.addEventListener("click", undo);
+  els.clearBtn.addEventListener("click", clearBoard);
+
+  function updateToolState() {
+    const live = canDraw();
+    els.undoBtn.disabled = !live || !S.past.length;
+    els.clearBtn.disabled = !live || !S.strokes.length;
+    els.wrap.classList.toggle("locked", !live);
+    if (S.round && S.round.mode === "judge") els.doneBtn.disabled = !live || !S.strokes.length;
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (els.dialog.open) return;
+    const tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); }
+    else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "e") setEraser(!S.eraser);
+  });
+
+  // ---------------------------------------------------------------- Gemma's face & bubble
+  function setRobot(state) {
+    els.robot.classList.remove("thinking", "happy", "sad");
+    if (state !== "idle") {
+      void els.robot.getBoundingClientRect(); // restart one-shot animations
+      els.robot.classList.add(state);
+    }
+  }
+
+  let typeToken = 0;
+  function typeText(el, text, speed = 20) {
+    const token = ++typeToken;
+    el.textContent = "";
+    if (reducedMotion) { el.textContent = text; return Promise.resolve(); }
+    el.classList.add("typing");
+    let i = 0;
+    return new Promise((resolve) => {
+      (function step() {
+        if (token !== typeToken) { el.classList.remove("typing"); return resolve(); }
+        i++;
+        el.textContent = text.slice(0, i);
+        if (i >= text.length) { el.classList.remove("typing"); return resolve(); }
+        const ch = text[i - 1];
+        setTimeout(step, speed + (/[.!?]/.test(ch) ? 160 : /[,;:]/.test(ch) ? 80 : 0));
+      })();
+    });
+  }
+
+  function say({ lead = "", guess = "", hit = false, comment = "", error = false, thinking = false, model = "" }) {
+    els.dots.classList.toggle("hidden", !thinking);
+    els.bubbleGuess.innerHTML = "";
+    if (lead || guess) {
+      if (lead) els.bubbleGuess.append(lead + " ");
+      if (guess) {
+        const b = document.createElement("b");
+        b.textContent = guess;
+        if (hit) b.classList.add("hit");
+        els.bubbleGuess.append(b);
+        if (S.mode === "guess" && !hit) els.bubbleGuess.append("?");
+        if (hit) els.bubbleGuess.append("!");
+      }
+    }
+    els.bubbleComment.classList.toggle("error", !!error);
+    els.modelTag.textContent = model ? `via ${model}` : "";
+    els.bubble.classList.remove("pulse"); void els.bubble.offsetWidth; els.bubble.classList.add("pulse");
+    if (thinking) { typeToken++; els.bubbleComment.classList.remove("typing"); els.bubbleComment.textContent = comment; return Promise.resolve(); }
+    return typeText(els.bubbleComment, comment);
+  }
+
+  const confColor = (c) => `hsl(${Math.round(c * 1.25)}, 82%, 52%)`;
+  function setConfidence(c) {
+    c = Math.max(0, Math.min(100, Math.round(c || 0)));
+    els.confFill.style.width = c + "%";
+    els.confFill.style.setProperty("--fill", confColor(c));
+    els.confFill.classList.toggle("zero", c === 0);
+    els.confText.textContent = c + "%";
+    els.confMeter.setAttribute("aria-valuenow", String(c));
+  }
+
+  // ---------------------------------------------------------------- log
+  function renderLog() {
+    const items = S.logItems[S.mode];
+    els.log.innerHTML = "";
+    if (!items.length) {
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = S.mode === "guess" ? "No guesses yet. Start drawing!" : "No critiques yet. Gemma is sharpening its pencil.";
+      els.log.append(li);
+      return;
+    }
+    for (const it of items) els.log.append(logRow(it));
+  }
+  function logRow(it) {
+    const li = document.createElement("li");
+    if (it.hit) li.className = "hit";
+    const t = document.createElement("span"); t.className = "t"; t.textContent = it.tag;
+    const g = document.createElement("span"); g.className = "g"; g.textContent = it.text; g.title = it.title || it.text;
+    const m = document.createElement("span"); m.className = "mini";
+    const fill = document.createElement("i"); fill.style.width = it.pct + "%"; fill.style.setProperty("--fill", confColor(it.pct));
+    m.append(fill);
+    const p = document.createElement("span"); p.className = "p"; p.textContent = it.value;
+    li.append(t, g, m, p);
+    return li;
+  }
+  function addLog(mode, item) {
+    const list = S.logItems[mode];
+    list.unshift(item);
+    if (list.length > 40) list.pop();
+    if (S.mode === mode) {
+      const empty = els.log.querySelector(".empty");
+      if (empty) empty.remove();
+      els.log.prepend(logRow(item));
+      els.log.scrollTop = 0;
+    }
+  }
+
+  // ---------------------------------------------------------------- matching ("cats" == "cat", "ice-cream" == "ice cream", tiny typos ok)
+  function norm(s) {
+    return String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9 ]+/g, " ").replace(/\b(a|an|the|some|my)\b/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function singular(w) {
+    if (w.length > 4 && w.endsWith("ies")) return w.slice(0, -3) + "y";
+    if (w.length > 4 && /(ches|shes|xes|sses|zes)$/.test(w)) return w.slice(0, -2);
+    if (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) return w.slice(0, -1);
+    return w;
+  }
+  function lev(a, b) {
+    if (a === b) return 0;
+    const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      let prev = row[0]; row[0] = i;
+      for (let j = 1; j <= b.length; j++) {
+        const tmp = row[j];
+        row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+        prev = tmp;
+      }
+    }
+    return row[b.length];
+  }
+  function matchesOne(guess, target) {
+    const g = norm(guess).split(" ").map(singular).join(" ");
+    const w = norm(target).split(" ").map(singular).join(" ");
+    if (!g || !w) return false;
+    if (g === w) return true;
+    const gc = g.replace(/ /g, ""), wc = w.replace(/ /g, "");
+    if (gc === wc) return true;
+    if ((" " + g + " ").includes(" " + w + " ")) return true;   // "red apple" counts for "apple"
+    const tolerance = wc.length >= 8 ? 2 : wc.length >= 4 ? 1 : 0;
+    return lev(gc, wc) <= tolerance;
+  }
+  const isMatch = (guess, round) => [round.word, ...(round.aliases || [])].some((t) => matchesOne(guess, t));
+
+  // ---------------------------------------------------------------- UI helpers
+  let toastTimer;
+  function toast(msg) {
+    els.toast.textContent = msg;
+    els.toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => els.toast.classList.remove("show"), 3800);
+  }
+
+  function showOverlay(show) {
+    els.overlay.classList.toggle("gone", !show);
+    els.overlay.inert = !show;
+  }
+  function showBanner(kind, title, sub) {
+    els.banner.className = "banner " + kind;
+    els.bannerTitle.textContent = title;
+    els.bannerSub.textContent = sub || "";
+  }
+  function hideBanner() { els.banner.className = "banner hidden"; }
+
+  // "glasses"/"scissors"/"headphones" read better without an article
+  const PLURALS = /^(glasses|sunglasses|scissors|headphones|mountains|pants|shoes)$/i;
+  const withArticle = (w) => PLURALS.test(w) ? w : (/^[aeiou]/i.test(w) ? "an " : "a ") + w;
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  function setWord(label, word, difficulty) {
+    els.wordLabel.textContent = label;
+    els.wordText.textContent = word;
+    if (difficulty) {
+      const d = document.createElement("span");
+      d.className = "difficulty";
+      d.textContent = difficulty;
+      els.wordText.append(d);
+    }
+    els.wordCard.classList.remove("reveal"); void els.wordCard.offsetWidth; els.wordCard.classList.add("reveal");
+  }
+
+  function setTimer(left) {
+    const frac = Math.max(0, left / ROUND_SECONDS);
+    els.timerRing.style.strokeDashoffset = String(100 - frac * 100);
+    els.timerText.textContent = String(Math.ceil(left));
+    els.timer.classList.toggle("warn", left <= 20 && left > 10);
+    els.timer.classList.toggle("danger", left <= 10 && left > 0);
+  }
+
+  function animateNumber(el, from, to, ms = 900) {
+    if (reducedMotion || from === to) { el.textContent = String(to); return; }
+    const t0 = performance.now();
+    (function step(now) {
+      const t = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - t, 3);
+      el.textContent = String(Math.round(from + (to - from) * e));
+      if (t < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+
+  function addPoints(pts) {
+    const before = stats.points;
+    stats.points += pts;
+    saveStats();
+    animateNumber(els.points, before, stats.points);
+    els.scoreChip.classList.remove("bump"); void els.scoreChip.offsetWidth; els.scoreChip.classList.add("bump");
+  }
+
+  function setButtons({ primary = null, done = false, skip = false }) {
+    els.primaryBtn.classList.toggle("hidden", !primary);
+    if (primary) els.primaryBtn.textContent = primary;
+    els.doneBtn.classList.toggle("hidden", !done);
+    els.skipBtn.classList.toggle("hidden", !skip);
+  }
+
+  // ---------------------------------------------------------------- mode switching
+  const INTRO = {
+    guess: {
+      emoji: "🤖", title: "You draw, Gemma guesses",
+      text: "You get a secret word and 60 seconds. Sketch it, and every time you pause Gemma 4 takes a guess. The faster it gets it, the more points you both earn!",
+      button: "Start round",
+    },
+    judge: {
+      emoji: "🎨", title: "Gemma challenges you",
+      text: "Gemma picks a word, you draw it, then hit Done. Gemma's art critic mode scores your masterpiece 0–10. No refunds.",
+      button: "Give me a challenge",
+    },
+  };
+
+  function setMode(mode, force = false) {
+    if (!force && S.mode === mode && !S.round) return;
+    endRoundSilently();
+    S.mode = mode;
+    document.querySelectorAll(".mode-btn").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.mode === mode)));
+    const intro = INTRO[mode];
+    els.overlayEmoji.textContent = intro.emoji;
+    els.overlayTitle.textContent = intro.title;
+    els.overlayText.textContent = intro.text;
+    els.overlayBtn.textContent = intro.button;
+    showOverlay(true);
+    hideBanner();
+    resetBoard();
+    els.mini.textContent = "";
+    els.timer.classList.toggle("hidden", mode !== "guess");
+    els.confCard.classList.toggle("hidden", mode !== "guess");
+    els.gaugeCard.classList.toggle("hidden", mode !== "judge");
+    els.logTitle.textContent = mode === "guess" ? "Guess log" : "Critique wall";
+    setWord(mode === "guess" ? "Your secret word" : "Gemma's challenge", "???");
+    setTimer(ROUND_SECONDS);
+    setConfidence(0);
+    resetGauge();
+    setButtons({});
+    setRobot("idle");
+    say(mode === "guess"
+      ? { comment: "Hi! I'm Gemma. You draw, I guess. I promise not to peek at the word. (I literally can't.)" }
+      : { comment: "Ah, a fellow artist. I'll pick the subject, you bring the talent. Let's see what you've got." });
+    renderLog();
+  }
+  document.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+
+  function endRoundSilently() {
+    if (S.round) S.round.active = false;
+    S.round = null;
+    clearInterval(S.tickHandle);
+    clearTimeout(S.guessTimer);
+    updateToolState();
+  }
+
+  function startFromButtons() {
+    if (S.mode === "guess") startGuessRound(); else startJudgeRound();
+  }
+  els.overlayBtn.addEventListener("click", startFromButtons);
+  els.primaryBtn.addEventListener("click", startFromButtons);
+  els.skipBtn.addEventListener("click", () => {
+    if (S.round && S.round.active && S.round.mode === "guess") {
+      stats.streak = 0; saveStats();
+      startGuessRound();
+    }
+  });
+  els.doneBtn.addEventListener("click", submitJudge);
+
+  async function fetchWord() {
+    const data = await api("/challenge?avoid=" + encodeURIComponent(S.lastWord));
+    if (!data.ok || !data.word) { toast(data.error || "Couldn't get a word. Try again!"); return null; }
+    S.lastWord = data.word;
+    return data;
+  }
+
+  // ---------------------------------------------------------------- mode 1: you draw, Gemma guesses
+  async function startGuessRound() {
+    els.overlayBtn.disabled = els.primaryBtn.disabled = true;
+    const data = await fetchWord();
+    els.overlayBtn.disabled = els.primaryBtn.disabled = false;
+    if (!data || S.mode !== "guess") return;
+
+    endRoundSilently();
+    S.round = { id: ++S.roundSeq, mode: "guess", word: data.word, aliases: data.aliases || [], active: true, start: performance.now(), history: [] };
+    S.sentVersion = -1;
+    S.logItems.guess = [];
+    renderLog();
+    resetBoard();
+    hideBanner();
+    showOverlay(false);
+    els.mini.textContent = "";
+    setWord("Draw this for Gemma", data.word, data.difficulty);
+    setConfidence(0);
+    setTimer(ROUND_SECONDS);
+    setButtons({ skip: true });
+    setRobot("idle");
+    say({ comment: "Ooh, new word! I'm watching your pencil very closely…" });
+    updateToolState();
+
+    const round = S.round;
+    S.tickHandle = setInterval(() => {
+      if (S.round !== round || !round.active) return;
+      const left = ROUND_SECONDS - (performance.now() - round.start) / 1000;
+      setTimer(Math.max(0, left));
+      if (left <= 0) loseGuessRound(round);
+    }, 100);
+  }
+
+  function scheduleGuess() {
+    clearTimeout(S.guessTimer);
+    if (!S.round || !S.round.active || S.round.mode !== "guess") return;
+    S.guessTimer = setTimeout(requestGuess, GUESS_DEBOUNCE_MS);
+  }
+
+  async function requestGuess() {
+    const round = S.round;
+    if (!round || !round.active || round.mode !== "guess") return;
+    if (S.inFlight || S.cur) return;                       // finishing request will reschedule
+    if (S.version === S.sentVersion || !S.strokes.length) return;
+
+    S.inFlight = true;
+    S.sentVersion = S.version;
+    setRobot("thinking");
+    say({ thinking: true, comment: "Hmm, let me look…" });
+    let data;
+    try {
+      data = await api("/guess", { image: exportPNG(), history: round.history });
+    } finally {
+      S.inFlight = false;
+    }
+    if (S.round !== round || !round.active) return;        // round ended while Gemma was thinking
+
+    if (!data.ok) {
+      setRobot("sad");
+      say({ comment: data.error || "My circuits got confused. Keep drawing!", error: true });
+    } else {
+      const elapsed = (performance.now() - round.start) / 1000;
+      const hit = isMatch(data.guess, round);
+      round.history.push(data.guess);
+      setConfidence(hit ? Math.max(data.confidence, 90) : data.confidence);
+      els.mini.textContent = `🤖 ${data.guess}${hit ? "!" : "?"} · ${data.confidence}%`;
+      addLog("guess", { tag: Math.round(elapsed) + "s", text: data.guess, title: data.comment, pct: data.confidence, value: data.confidence + "%", hit });
+      if (hit) {
+        winGuessRound(round, elapsed, data);
+        return;
+      }
+      setRobot("idle");
+      say({ lead: "Is it…", guess: data.guess, comment: data.comment, model: data.model });
+    }
+    if (S.version !== S.sentVersion) scheduleGuess();       // user kept drawing while we waited
+  }
+
+  function winGuessRound(round, elapsed, data) {
+    round.active = false;
+    clearInterval(S.tickHandle);
+    clearTimeout(S.guessTimer);
+    updateToolState();
+    const secs = Math.max(1, Math.round(elapsed));
+    const left = Math.max(0, ROUND_SECONDS - elapsed);
+    const pts = 50 + Math.round(left * 2);
+
+    stats.rounds++; stats.gemmaWins++; stats.streak++;
+    stats.bestStreak = Math.max(stats.bestStreak, stats.streak);
+    stats.fastest = stats.fastest == null ? secs : Math.min(stats.fastest, secs);
+    addPoints(pts);
+
+    setRobot("happy");
+    say({ lead: "It's a", guess: data.guess, hit: true, comment: data.comment, model: data.model });
+    showBanner("win", `Gemma got it in ${secs}s! 🎉`, `+${pts} points${stats.streak > 1 ? ` · ${stats.streak} in a row!` : ""}`);
+    setButtons({ primary: "Next word →" });
+    confetti();
+  }
+
+  function loseGuessRound(round) {
+    round.active = false;
+    clearInterval(S.tickHandle);
+    clearTimeout(S.guessTimer);
+    setTimer(0);
+    updateToolState();
+    stats.rounds++; stats.streak = 0;
+    saveStats();
+    setRobot("sad");
+    const lastGuess = round.history[round.history.length - 1];
+    say({ comment: lastGuess
+      ? `${cap(withArticle(round.word))}?! I was SO sure it was ${withArticle(lastGuess)}. Rematch!`
+      : `I didn't even get a look! Draw something next time and I'll prove myself.` });
+    showBanner("lose", "⏰ Time's up!", `The word was “${round.word}”`);
+    setButtons({ primary: "Try another word →" });
+  }
+
+  // ---------------------------------------------------------------- mode 2: Gemma challenges you
+  async function startJudgeRound() {
+    els.overlayBtn.disabled = els.primaryBtn.disabled = true;
+    const data = await fetchWord();
+    els.overlayBtn.disabled = els.primaryBtn.disabled = false;
+    if (!data || S.mode !== "judge") return;
+
+    endRoundSilently();
+    S.round = { id: ++S.roundSeq, mode: "judge", word: data.word, active: true, judging: false };
+    resetBoard();
+    hideBanner();
+    showOverlay(false);
+    setWord("Gemma challenges you to draw", data.word, data.difficulty);
+    resetGauge();
+    setButtons({ done: true });
+    setRobot("idle");
+    say({ comment: `Draw me ${withArticle(data.word)}. Take your time, then hit Done. I'm a tough but fair critic.` });
+    updateToolState();
+  }
+
+  async function submitJudge() {
+    const round = S.round;
+    if (!round || round.mode !== "judge" || !round.active || round.judging) return;
+    if (!S.strokes.length) { toast("Draw something first. Gemma can't critique an empty canvas!"); return; }
+
+    round.judging = true;
+    updateToolState();
+    els.doneBtn.disabled = true;
+    els.doneBtn.textContent = "Judging…";
+    setRobot("thinking");
+    els.gaugeLabel.textContent = "Adjusting monocle…";
+    say({ thinking: true, comment: "Studying your brushwork…" });
+
+    const data = await api("/judge", { image: exportPNG(), word: round.word });
+    els.doneBtn.textContent = "Done! Judge me ✨";
+    if (S.round !== round) return;
+    round.judging = false;
+
+    if (!data.ok) {
+      setRobot("sad");
+      say({ comment: (data.error || "I couldn't judge that one.") + " Hit Done to try again.", error: true });
+      els.gaugeLabel.textContent = "The critic is unavailable";
+      updateToolState();
+      return;
+    }
+
+    round.active = false;
+    updateToolState();
+    const score = Math.max(0, Math.min(10, Math.round(data.score)));
+    const pts = score * 15;
+    stats.challenges++; stats.scoreSum += score;
+    stats.bestScore = stats.bestScore == null ? score : Math.max(stats.bestScore, score);
+    addPoints(pts);
+
+    showGauge(score);
+    setRobot(score >= 7 ? "happy" : score <= 3 ? "sad" : "idle");
+    say({ comment: data.critique, model: data.model });
+    addLog("judge", { tag: score + "/10", text: round.word, title: data.critique, pct: score * 10, value: "+" + pts });
+    showBanner("judge", `${score}/10 · ${verdict(score)}`, `+${pts} points`);
+    setButtons({ primary: "New challenge →" });
+    if (score >= 8) setTimeout(confetti, 900);
+  }
+
+  function verdict(score) {
+    if (score >= 9) return "Picasso who?!";
+    if (score >= 7) return "Gallery-worthy!";
+    if (score >= 5) return "Respectable doodle";
+    if (score >= 3) return "Getting there…";
+    return "Bold. Very abstract.";
+  }
+  function resetGauge() {
+    els.gaugeFill.style.strokeDashoffset = "100";
+    els.needle.style.transform = "rotate(-90deg)";
+    els.gaugeNum.textContent = "–";
+    els.gaugeLabel.textContent = "Waiting for a masterpiece…";
+  }
+  function showGauge(score) {
+    requestAnimationFrame(() => {
+      els.gaugeFill.style.strokeDashoffset = String(100 - score * 10);
+      els.needle.style.transform = `rotate(${-90 + score * 18}deg)`;
+    });
+    animateNumber(els.gaugeNum, 0, score, 1300);
+    els.gaugeLabel.textContent = verdict(score);
+  }
+
+  // ---------------------------------------------------------------- scoreboard
+  function renderStats() {
+    const rate = stats.rounds ? Math.round((stats.gemmaWins / stats.rounds) * 100) + "%" : "–";
+    const avg = stats.challenges ? (stats.scoreSum / stats.challenges).toFixed(1) : "–";
+    const rows = [
+      ["⭐ Total points", stats.points],
+      ["🎯 Guess rounds", stats.rounds],
+      ["🤖 Gemma got it", stats.rounds ? `${stats.gemmaWins} (${rate})` : "–"],
+      ["⚡ Fastest guess", stats.fastest == null ? "–" : stats.fastest + "s"],
+      ["🔥 Best streak", stats.bestStreak],
+      ["🎨 Challenges", stats.challenges],
+      ["📊 Avg. art score", avg === "–" ? avg : avg + "/10"],
+      ["🏅 Best art score", stats.bestScore == null ? "–" : stats.bestScore + "/10"],
+    ];
+    els.stats.innerHTML = "";
+    for (const [label, value] of rows) {
+      const d = document.createElement("div"); d.className = "stat";
+      const b = document.createElement("b"); b.textContent = String(value);
+      const s = document.createElement("small"); s.textContent = label;
+      d.append(b, s);
+      els.stats.append(d);
+    }
+  }
+  els.scoreChip.addEventListener("click", () => {
+    renderStats();
+    if (typeof els.dialog.showModal === "function") els.dialog.showModal(); else els.dialog.setAttribute("open", "");
+  });
+  $("#closeStats").addEventListener("click", () => els.dialog.close());
+  els.dialog.addEventListener("click", (e) => { if (e.target === els.dialog) els.dialog.close(); });
+  $("#resetStats").addEventListener("click", () => {
+    if (!confirm("Reset all your Doodle Duel stats?")) return;
+    stats = { ...DEFAULT_STATS };
+    saveStats();
+    els.points.textContent = "0";
+    renderStats();
+  });
+
+  // ---------------------------------------------------------------- confetti
+  const cctx = els.confetti.getContext("2d");
+  const COLORS = ["#ff5d8f", "#ffd23f", "#2ec4b6", "#3a86ff", "#8e5cf7", "#ff9f1c", "#2fbf71"];
+  let parts = [], confettiRunning = false;
+  function confetti() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = window.innerWidth, H = window.innerHeight;
+    els.confetti.width = W * dpr; els.confetti.height = H * dpr;
+    cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = reducedMotion ? 40 : 180;
+    for (let i = 0; i < n; i++) {
+      const left = i % 2 === 0;
+      parts.push({
+        x: left ? -10 : W + 10, y: H * (0.55 + Math.random() * 0.3),
+        vx: (left ? 1 : -1) * (4 + Math.random() * 9), vy: -(9 + Math.random() * 13),
+        w: 7 + Math.random() * 7, h: 4 + Math.random() * 6,
+        rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.35,
+        color: COLORS[(Math.random() * COLORS.length) | 0], round: Math.random() < 0.3, tilt: Math.random() * 10,
+      });
+    }
+    if (!confettiRunning) { confettiRunning = true; requestAnimationFrame(confettiStep); }
+  }
+  function confettiStep() {
+    const W = window.innerWidth, H = window.innerHeight;
+    cctx.clearRect(0, 0, W, H);
+    parts = parts.filter((p) => p.y < H + 30);
+    for (const p of parts) {
+      p.vy += 0.32; p.vx *= 0.985; p.vy *= 0.995;
+      p.x += p.vx + Math.sin((p.tilt += 0.08)) * 0.6; p.y += p.vy; p.rot += p.vr;
+      cctx.save();
+      cctx.translate(p.x, p.y); cctx.rotate(p.rot);
+      cctx.fillStyle = p.color;
+      if (p.round) { cctx.beginPath(); cctx.arc(0, 0, p.h / 1.4, 0, Math.PI * 2); cctx.fill(); }
+      else cctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.tilt)));
+      cctx.restore();
+    }
+    if (parts.length) requestAnimationFrame(confettiStep);
+    else { confettiRunning = false; cctx.clearRect(0, 0, W, H); }
+  }
+
+  // ---------------------------------------------------------------- boot
+  els.points.textContent = String(stats.points);
+  setMode("guess", true);
+  resizeCanvas();
+  api("/health").then((h) => {
+    const ready = h.ok && h.key_configured;
+    els.statusDot.classList.toggle("off", !ready);
+    els.keyNotice.classList.toggle("hidden", !h.ok || h.key_configured);
+    if (!h.ok) toast(h.error || "Can't reach the server.");
+  });
+})();
+</script>
+</body>
+</html>
